@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="default"/>
+<meta name="apple-mobile-web-app-title" content="My Board"/>
+<meta name="theme-color" content="#E11D48"/>
+<link rel="manifest" href="manifest.json"/>
+<link rel="apple-touch-icon" href="icon.svg"/>
+<title>My Board</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@tabler/icons-webfont@3.19.0/dist/tabler-icons.min.css"/>
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#fff5f7;min-height:100vh;padding:1rem 1rem env(safe-area-inset-bottom)}
+.wrap{max-width:1300px;margin:0 auto}
+.top-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:.85rem}
+.board-title{font-size:22px;font-weight:600;color:#1a1a1a;flex:1;min-width:160px}
+.board-title span{color:#E11D48}
+.top-actions{display:flex;gap:7px;flex-wrap:wrap}
+.tbtn{display:inline-flex;align-items:center;gap:5px;font-size:12px;padding:5px 12px;border-radius:99px;border:0.5px solid #ddd;background:#fff;color:#333;cursor:pointer;white-space:nowrap;box-shadow:0 1px 3px rgba(0,0,0,.06)}
+.tbtn:hover{background:#fdf2f4}
+.tbtn.active{background:#FFE4E6;color:#881337;border-color:#E11D48}
+.tbtn.week{background:#E11D48;color:#fff;border-color:#E11D48}
+.tbtn.week:hover{background:#be123c}
+.sync-bar{border-radius:10px;padding:9px 14px;margin-bottom:.75rem;display:flex;align-items:center;gap:10px;border:0.5px solid;flex-wrap:wrap;transition:all .3s}
+.sync-bar.loading{background:#FFF1F2;border-color:#E11D48;color:#881337}
+.sync-bar.ok{background:#DCFCE7;border-color:#16A34A;color:#14532D}
+.sync-bar.offline{background:#F1F5F9;border-color:#94A3B8;color:#334155}
+.sl{font-size:13px;font-weight:500;flex:1}
+.ss{font-size:11px;opacity:.85;margin-top:1px}
+.due-banner{border-radius:10px;padding:10px 14px;margin-bottom:.75rem;display:flex;align-items:center;gap:10px;border:0.5px solid;flex-wrap:wrap}
+.due-banner.clear{background:#DCFCE7;border-color:#16A34A;color:#14532D}
+.due-banner.warn{background:#FEF9C3;border-color:#CA8A04;color:#713F12}
+.due-banner.danger{background:#FFE4E6;border-color:#E11D48;color:#881337}
+.blabel{font-size:13px;font-weight:500;flex:1}
+.bsub{font-size:11px;opacity:.85}
+.radar{margin-bottom:.75rem}
+.radar-title{font-size:12px;font-weight:500;color:#555;margin-bottom:5px;display:flex;align-items:center;gap:5px}
+.radar-cards{display:flex;gap:7px;flex-wrap:wrap}
+.radar-pill{display:inline-flex;align-items:center;gap:5px;font-size:11px;padding:4px 10px;border-radius:99px;border:0.5px solid;cursor:pointer;font-weight:500}
+.legend{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:.75rem}
+.legend-item{display:flex;align-items:center;gap:4px;font-size:11px;color:#555}
+.legend-dot{width:9px;height:9px;border-radius:50%}
+.columns{display:flex;gap:11px;overflow-x:auto;padding-bottom:1rem}
+.col{flex:1;min-width:170px;background:#fff;border-radius:13px;padding:9px;border:0.5px solid #f0d0d6;box-shadow:0 1px 4px rgba(225,29,72,.06)}
+.col-header{display:flex;align-items:center;gap:6px;margin-bottom:9px;padding:0 2px}
+.col-icon{font-size:15px}
+.col-title{font-size:11px;font-weight:600;color:#222;text-transform:uppercase;letter-spacing:.03em}
+.col-count{margin-left:auto;font-size:11px;padding:1px 6px;border-radius:99px;background:#fff5f7;color:#888;border:0.5px solid #f0d0d6}
+.cards{display:flex;flex-direction:column;gap:7px;min-height:48px}
+.card{border-radius:9px;padding:9px 10px;cursor:pointer;border:0.5px solid transparent;transition:transform .1s,box-shadow .1s;user-select:none}
+.card:hover{box-shadow:0 2px 8px rgba(0,0,0,.08);transform:translateY(-1px)}
+.card[draggable]:active{cursor:grabbing}
+.card.dragging{opacity:.5;transform:rotate(2deg) scale(1.04)}
+.card-top{display:flex;align-items:flex-start;justify-content:space-between;gap:5px}
+.card-name{font-size:12px;font-weight:500;line-height:1.4}
+.priority-badge{display:inline-block;font-size:9px;font-weight:700;padding:2px 6px;border-radius:99px;white-space:nowrap;flex-shrink:0}
+.card-note{font-size:10px;margin-top:4px;line-height:1.45;opacity:.82}
+.card-footer{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
+.cat-tag{font-size:9px;padding:2px 5px;border-radius:99px;font-weight:500}
+.due-tag{display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:2px 5px;border-radius:99px;font-weight:500}
+.drop-zone{border:1.5px dashed #f0d0d6;border-radius:8px;height:36px;display:none;align-items:center;justify-content:center;font-size:10px;color:#ccc;margin-top:3px}
+.drop-zone.active{display:flex}
+.add-btn{width:100%;margin-top:6px;font-size:11px;padding:5px 0;background:none;border:0.5px dashed #f0d0d6;border-radius:8px;color:#aaa;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px}
+.add-btn:hover{background:#fff5f7}
+.overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;align-items:center;justify-content:center;padding:1rem}
+.overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;border:0.5px solid #f0d0d6;padding:1.4rem;width:340px;max-width:100%;box-shadow:0 8px 32px rgba(225,29,72,.1);max-height:90vh;overflow-y:auto}
+.modal h3{font-size:15px;font-weight:600;margin-bottom:12px;color:#1a1a1a}
+.fl{font-size:11px;color:#888;margin-bottom:3px;margin-top:9px}
+.modal input,.modal select,.modal textarea{width:100%;font-size:13px;padding:8px 10px;border-radius:8px;border:0.5px solid #f0d0d6;background:#fff5f7;color:#1a1a1a;font-family:inherit;-webkit-appearance:none}
+.modal input:focus,.modal select:focus,.modal textarea:focus{outline:none;border-color:#E11D48}
+.modal textarea{resize:vertical;min-height:64px}
+.modal-btns{display:flex;gap:8px;justify-content:space-between;margin-top:14px}
+.modal-btns .right{display:flex;gap:8px}
+.mbtn{font-size:12px;padding:7px 14px;border-radius:8px;border:0.5px solid #ddd;cursor:pointer;background:#f9f9f9;color:#333}
+.mbtn.primary{background:#E11D48;color:#fff;border-color:#E11D48}
+.mbtn.danger{background:#fff0f0;color:#a32d2d;border-color:#f09595}
+
+/* Week summary overlay */
+.week-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:300;align-items:flex-start;justify-content:center;padding:1.5rem 1rem;overflow-y:auto}
+.week-overlay.open{display:flex}
+.week-box{background:#fff;border-radius:16px;padding:1.5rem;width:100%;max-width:480px;box-shadow:0 8px 40px rgba(0,0,0,.15)}
+.week-box h2{font-size:18px;font-weight:600;color:#1a1a1a;margin-bottom:4px}
+.week-sub{font-size:12px;color:#888;margin-bottom:1.25rem}
+.week-section{margin-bottom:1.25rem}
+.week-section-title{font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.05em;color:#888;margin-bottom:8px;padding-bottom:4px;border-bottom:0.5px solid #f0d0d6}
+.week-item{display:flex;align-items:flex-start;gap:8px;padding:6px 0;border-bottom:0.5px solid #fafafa}
+.week-item:last-child{border-bottom:none}
+.week-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;margin-top:4px}
+.week-name{font-size:13px;color:#1a1a1a;flex:1}
+.week-due{font-size:11px;padding:2px 6px;border-radius:99px;font-weight:500;white-space:nowrap}
+.week-empty{font-size:13px;color:#aaa;font-style:italic;padding:4px 0}
+.week-close{width:100%;margin-top:1rem;padding:10px;border-radius:10px;border:none;background:#E11D48;color:#fff;font-size:14px;font-weight:500;cursor:pointer}
+
+.install-banner{display:none;background:#1a1a1a;color:#fff;padding:10px 14px;border-radius:10px;margin-bottom:.75rem;font-size:12px;align-items:center;gap:10px;flex-wrap:wrap}
+.install-banner.show{display:flex}
+.ibtn{font-size:11px;padding:4px 10px;border-radius:99px;border:0.5px solid #fff;background:transparent;color:#fff;cursor:pointer}
+@media(max-width:600px){body{padding:.75rem .5rem env(safe-area-inset-bottom)}.board-title{font-size:18px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="install-banner" id="install-banner">
+    <i class="ti ti-device-mobile"></i>
+    <strong style="flex:1">Install as an app on this device</strong>
+    <button class="ibtn" id="install-btn">Install</button>
+    <button class="ibtn" onclick="document.getElementById('install-banner').classList.remove('show')">✕</button>
+  </div>
+
+  <div class="top-bar">
+    <div class="board-title">My <span>Board</span></div>
+    <div class="top-actions">
+      <button class="tbtn week" onclick="openWeekSummary()"><i class="ti ti-calendar-week"></i> This Week</button>
+      <button class="tbtn" id="radar-toggle" onclick="toggleRadar()"><i class="ti ti-radar"></i> Radar</button>
+      <button class="tbtn" onclick="manualSync()"><i class="ti ti-refresh"></i> Sync</button>
+    </div>
+  </div>
+
+  <div class="sync-bar loading" id="sync-bar">
+    <i class="ti ti-cloud" style="font-size:16px"></i>
+    <div style="flex:1">
+      <div class="sl" id="sync-label">Connecting…</div>
+      <div class="ss" id="sync-sub">Syncing across your devices</div>
+    </div>
+  </div>
+
+  <div class="due-banner clear" id="due-banner">
+    <i class="ti ti-calendar-due" style="font-size:18px"></i>
+    <div style="flex:1">
+      <div class="blabel" id="banner-label">No upcoming deadlines this week</div>
+      <div class="bsub" id="banner-sub">Add due dates to your cards to see alerts here.</div>
+    </div>
+  </div>
+
+  <div class="radar" id="radar-section" style="display:none">
+    <div class="radar-title"><i class="ti ti-radar"></i> Deadline radar — next 14 days</div>
+    <div class="radar-cards" id="radar-cards"></div>
+  </div>
+
+  <div class="legend" id="legend"></div>
+  <div class="columns" id="columns"></div>
+</div>
+
+<!-- Week summary -->
+<div class="week-overlay" id="week-overlay">
+  <div class="week-box">
+    <h2>📋 This Week</h2>
+    <div class="week-sub" id="week-sub"></div>
+    <div id="week-content"></div>
+    <button class="week-close" onclick="closeWeekSummary()">Got it!</button>
+  </div>
+</div>
+
+<!-- Card modal -->
+<div class="overlay" id="overlay">
+  <div class="modal">
+    <h3 id="modal-title">Task</h3>
+    <div class="fl">Task name</div>
+    <input type="text" id="f-name" placeholder="Task name"/>
+    <div class="fl">Category</div>
+    <select id="f-cat">
+      <option value="school">School</option>
+      <option value="practicum">Practicum</option>
+      <option value="health">Health</option>
+      <option value="social">Social</option>
+      <option value="life">Life</option>
+    </select>
+    <div class="fl">Priority</div>
+    <select id="f-priority">
+      <option value="none">— none —</option>
+      <option value="low">Low</option>
+      <option value="medium">Medium</option>
+      <option value="high">High</option>
+      <option value="urgent">Urgent</option>
+    </select>
+    <div class="fl">Due date (optional)</div>
+    <input type="date" id="f-due"/>
+    <div class="fl">Notes</div>
+    <textarea id="f-notes" placeholder="Add details, reminders…"></textarea>
+    <div class="modal-btns">
+      <button class="mbtn danger" id="delete-btn" onclick="deleteCard()">Delete</button>
+      <div class="right">
+        <button class="mbtn" onclick="closeModal()">Cancel</button>
+        <button class="mbtn primary" onclick="saveCard()">Save</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js';
+import { getDatabase, ref, onValue, set } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js';
+
+// ── REPLACE THIS BLOCK WITH YOUR FIREBASE CONFIG ──────
+const firebaseConfig = {
+  apiKey: "AIzaSyAWdgH53NDp-bZ7niwV52dvl7uU6VQuS1I",
+  authDomain: "project-tracker-77544.firebaseapp.com",
+  databaseURL: "https://project-tracker-77544-default-rtdb.firebaseio.com",
+  projectId: "project-tracker-77544",
+  storageBucket: "project-tracker-77544.firebasestorage.app",
+  messagingSenderId: "424422450539",
+  appId: "1:424422450539:web:4816017e8af4ca7855982e"
+};
+// ─────────────────────────────────────────────────────
+
+// Board slug — this is the unique key in Firebase for this board
+const BOARD_SLUG = 'my-board';
+
+const COLS=[
+  {id:'todo',label:'To Do',icon:'ti-circle',color:'#94A3B8'},
+  {id:'inprog',label:'In Progress',icon:'ti-player-play',color:'#E11D48'},
+  {id:'waiting',label:'On Hold / Blocked',icon:'ti-clock-pause',color:'#CA8A04'},
+  {id:'recurring',label:'Recurring',icon:'ti-refresh',color:'#16A34A'},
+  {id:'done',label:'Complete',icon:'ti-circle-check',color:'#0F6E56'},
+];
+
+const CATS={
+  school:{label:'School',bg:'#EEF2FF',text:'#3730A3',dot:'#6366F1',border:'#6366F144'},
+  practicum:{label:'Practicum',bg:'#FDF4FF',text:'#6B21A8',dot:'#A855F7',border:'#A855F744'},
+  health:{label:'Health',bg:'#DCFCE7',text:'#14532D',dot:'#16A34A',border:'#16A34A44'},
+  social:{label:'Social',bg:'#FEF9C3',text:'#713F12',dot:'#CA8A04',border:'#CA8A0444'},
+  life:{label:'Life',bg:'#FFF1F2',text:'#881337',dot:'#E11D48',border:'#E11D4844'},
+};
+
+const PRIO={
+  none:{label:null},
+  low:{label:'Low',bg:'#DCFCE7',text:'#14532D'},
+  medium:{label:'Medium',bg:'#FEF9C3',text:'#713F12'},
+  high:{label:'High',bg:'#FFEDD5',text:'#7C2D12'},
+  urgent:{label:'URGENT',bg:'#E11D48',text:'#fff'},
+};
+const PRIO_ORDER={urgent:0,high:1,medium:2,low:3,none:4};
+
+const DEFAULT_CARDS=[
+  // Recurring tasks
+  {id:1,name:'Laundry',col:'recurring',cat:'life',priority:'low',due:'',notes:'Once a week'},
+  {id:2,name:'Fill meds',col:'recurring',cat:'health',priority:'high',due:'',notes:'Don\'t forget!'},
+  {id:3,name:'Buy groceries',col:'recurring',cat:'life',priority:'medium',due:'',notes:''},
+  {id:4,name:'Clean apartment',col:'recurring',cat:'life',priority:'low',due:'',notes:'Once a week'},
+];
+
+let cards=JSON.parse(JSON.stringify(DEFAULT_CARDS));
+let nextId=10;
+let editingId=null,addingCol=null,dragging=null,radarVisible=false;
+let db=null,dbRef=null,saveTimeout=null;
+
+// ── Firebase ──────────────────────────────────────────
+function initFirebase(){
+  try{
+    const app=initializeApp(firebaseConfig);
+    db=getDatabase(app);
+    dbRef=ref(db,`project-tracker/${BOARD_SLUG}`);
+    setSyncStatus('loading','Connecting…','');
+    onValue(dbRef,(snapshot)=>{
+      const data=snapshot.val();
+      if(data&&data.cards!==undefined){
+        cards=data.cards||[];
+        nextId=data.nextId||nextId;
+        saveLocal();
+        render();
+        setSyncStatus('ok','Synced ✓','All your devices are up to date');
+      } else {
+        pushToFirebase();
+      }
+    },(err)=>{console.error(err);fallbackLocal();});
+  }catch(e){console.error(e);fallbackLocal();}
+}
+
+function pushToFirebase(){
+  if(!db||!dbRef)return;
+  clearTimeout(saveTimeout);
+  saveTimeout=setTimeout(async()=>{
+    try{
+      await set(dbRef,{cards,nextId,updated:Date.now()});
+      setSyncStatus('ok','Saved & synced ✓','All devices are up to date');
+    }catch(e){saveLocal();}
+  },600);
+}
+
+function save(){pushToFirebase();saveLocal();}
+function saveLocal(){try{localStorage.setItem('myboard_v1',JSON.stringify({cards,nextId}));}catch(e){}}
+function loadLocal(){try{const s=localStorage.getItem('myboard_v1');if(s){const d=JSON.parse(s);cards=d.cards||cards;nextId=d.nextId||nextId;return true;}}catch(e){}return false;}
+function fallbackLocal(){loadLocal();setSyncStatus('offline','Offline — saved locally','Will sync when back online');render();}
+function setSyncStatus(state,label,sub){
+  const bar=document.getElementById('sync-bar');
+  const icons={loading:'ti-cloud',ok:'ti-cloud-check',offline:'ti-cloud-off'};
+  bar.className='sync-bar '+state;
+  bar.querySelector('i').className=`ti ${icons[state]||'ti-cloud'}`;
+  document.getElementById('sync-label').textContent=label;
+  document.getElementById('sync-sub').textContent=sub;
+}
+window.manualSync=()=>{setSyncStatus('loading','Syncing…','');setTimeout(()=>setSyncStatus('ok','Synced ✓','All devices are up to date'),1500);};
+
+// ── Helpers ───────────────────────────────────────────
+function daysUntil(ds){
+  if(!ds)return null;
+  const now=new Date();now.setHours(0,0,0,0);
+  return Math.round((new Date(ds+'T00:00:00')-now)/86400000);
+}
+
+function updateDueBanner(){
+  const banner=document.getElementById('due-banner');
+  const label=document.getElementById('banner-label');
+  const sub=document.getElementById('banner-sub');
+  const active=cards.filter(c=>c.due&&c.col!=='done').map(c=>({...c,d:daysUntil(c.due)})).sort((a,b)=>a.d-b.d);
+  const overdue=active.filter(c=>c.d<0);
+  const today=active.filter(c=>c.d===0);
+  const soon=active.filter(c=>c.d>0&&c.d<=7);
+  banner.className='due-banner';
+  if(overdue.length){banner.classList.add('danger');label.textContent=`🚨 Overdue: ${overdue.map(c=>c.name).join(', ')}`;sub.textContent='These need attention now!';}
+  else if(today.length){banner.classList.add('danger');label.textContent=`⏰ Due today: ${today.map(c=>c.name).join(', ')}`;sub.textContent='Make time for these today!';}
+  else if(soon.length){banner.classList.add('warn');label.textContent=`📅 Due this week: ${soon.map(c=>c.name).join(', ')}`;sub.textContent='Keep these on your radar.';}
+  else{banner.classList.add('clear');label.textContent='No upcoming deadlines this week';sub.textContent='Add due dates to your cards to see alerts here.';}
+}
+
+// ── Week Summary ──────────────────────────────────────
+window.openWeekSummary=()=>{
+  const now=new Date();
+  const dayName=['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const monthName=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  document.getElementById('week-sub').textContent=`Week of ${dayName[now.getDay()]}, ${monthName[now.getMonth()]} ${now.getDate()}`;
+
+  const overdue=cards.filter(c=>c.due&&c.col!=='done'&&daysUntil(c.due)<0);
+  const dueToday=cards.filter(c=>c.due&&c.col!=='done'&&daysUntil(c.due)===0);
+  const dueSoon=cards.filter(c=>c.due&&c.col!=='done'&&daysUntil(c.due)>0&&daysUntil(c.due)<=7);
+  const inProgress=cards.filter(c=>c.col==='inprog');
+  const urgent=cards.filter(c=>c.col!=='done'&&(c.priority==='urgent'||c.priority==='high')&&!c.due);
+  const recurring=cards.filter(c=>c.col==='recurring');
+
+  function makeItem(card,showDue=true){
+    const cat=CATS[card.cat]||CATS.life;
+    const d=card.due?daysUntil(card.due):null;
+    let dueLabel='',dueBg='',dueText='';
+    if(d!==null){
+      if(d<0){dueLabel=`${Math.abs(d)}d overdue`;dueBg='#FFE4E6';dueText='#881337';}
+      else if(d===0){dueLabel='Due today';dueBg='#FFE4E6';dueText='#881337';}
+      else{dueLabel=`${d}d left`;dueBg='#FEF9C3';dueText='#713F12';}
+    }
+    return`<div class="week-item">
+      <div class="week-dot" style="background:${cat.dot}"></div>
+      <div class="week-name">${card.name}<span style="font-size:10px;color:#aaa;margin-left:5px">${cat.label}</span>${card.notes?`<div style="font-size:10px;color:#888;margin-top:2px">${card.notes.slice(0,60)}</div>`:''}</div>
+      ${showDue&&dueLabel?`<span class="week-due" style="background:${dueBg};color:${dueText}">${dueLabel}</span>`:''}
+    </div>`;
+  }
+
+  function section(title,items,showDue=true,emptyMsg=''){
+    if(!items.length&&!emptyMsg)return'';
+    return`<div class="week-section">
+      <div class="week-section-title">${title}</div>
+      ${items.length?items.map(c=>makeItem(c,showDue)).join(''):`<div class="week-empty">${emptyMsg}</div>`}
+    </div>`;
+  }
+
+  document.getElementById('week-content').innerHTML=
+    section('🚨 Overdue',overdue,true)+
+    section('⏰ Due Today',dueToday,true)+
+    section('📅 Due This Week',dueSoon,true)+
+    section('🔥 Urgent & High Priority',urgent,false,'None right now — nice!')+
+    section('⚡ In Progress',inProgress,false,'Nothing in progress yet')+
+    section('🔁 Recurring This Week',recurring,false)+
+    (overdue.length===0&&dueToday.length===0&&dueSoon.length===0&&urgent.length===0?
+    `<div class="week-section"><div class="week-empty" style="text-align:center;padding:1rem 0">✨ You\'re all caught up! Have a great week.</div></div>`:'');
+
+  document.getElementById('week-overlay').classList.add('open');
+};
+window.closeWeekSummary=()=>document.getElementById('week-overlay').classList.remove('open');
+
+window.toggleRadar=()=>{
+  radarVisible=!radarVisible;
+  document.getElementById('radar-section').style.display=radarVisible?'block':'none';
+  document.getElementById('radar-toggle').classList.toggle('active',radarVisible);
+  if(radarVisible)renderRadar();
+};
+function renderRadar(){
+  const rc=document.getElementById('radar-cards');
+  const rel=cards.filter(c=>c.due&&c.col!=='done').map(c=>({...c,d:daysUntil(c.due)})).filter(c=>c.d<=14).sort((a,b)=>a.d-b.d);
+  if(!rel.length){rc.innerHTML='<span style="font-size:12px;color:#aaa">No deadlines in the next 14 days.</span>';return;}
+  rc.innerHTML=rel.map(c=>{
+    const d=c.d;let bg,text;
+    if(d<0){bg='#FFE4E6';text='#881337';}else if(d===0){bg='#FFE4E6';text='#881337';}else if(d<=3){bg='#FAC775';text='#412402';}else if(d<=7){bg='#FEF9C3';text='#713F12';}else{bg='#DCFCE7';text='#14532D';}
+    const dl=d<0?`${Math.abs(d)}d OVERDUE`:d===0?'Due TODAY':`${d}d left`;
+    return`<span class="radar-pill" style="background:${bg};color:${text};border-color:${text}44" onclick="openEdit(${c.id})"><i class="ti ti-clock" style="font-size:10px"></i> ${c.name} — ${dl}</span>`;
+  }).join('');
+}
+
+function dueTag(ds){
+  if(!ds)return'';const d=daysUntil(ds);let bg,text,icon,label;
+  if(d<0){bg='#FFE4E6';text='#881337';icon='ti-alert-triangle';label=`${Math.abs(d)}d overdue`;}
+  else if(d===0){bg='#FFE4E6';text='#881337';icon='ti-alarm';label='Due today';}
+  else if(d<=3){bg='#FAC775';text='#412402';icon='ti-alarm';label=`${d}d left`;}
+  else if(d<=7){bg='#FEF9C3';text='#713F12';icon='ti-calendar';label=`${d}d left`;}
+  else{bg='#DCFCE7';text='#14532D';icon='ti-calendar';label=`${d}d left`;}
+  return`<span class="due-tag" style="background:${bg};color:${text}"><i class="ti ${icon}" style="font-size:9px"></i> ${label}</span>`;
+}
+
+// ── Render ────────────────────────────────────────────
+function render(){
+  document.getElementById('legend').innerHTML=Object.entries(CATS).map(([k,v])=>`<div class="legend-item"><div class="legend-dot" style="background:${v.dot}"></div>${v.label}</div>`).join('');
+  const colsEl=document.getElementById('columns');colsEl.innerHTML='';
+  COLS.forEach(col=>{
+    const colCards=cards.filter(c=>c.col===col.id);
+    const div=document.createElement('div');div.className='col';
+    div.innerHTML=`
+      <div class="col-header">
+        <i class="ti ${col.icon} col-icon" style="color:${col.color}"></i>
+        <span class="col-title">${col.label}</span>
+        <span class="col-count">${colCards.length}</span>
+      </div>
+      <div class="cards" id="cards-${col.id}"></div>
+      <div class="drop-zone" id="dz-${col.id}"><i class="ti ti-arrow-down"></i> drop here</div>
+      <button class="add-btn" onclick="openAdd('${col.id}')"><i class="ti ti-plus"></i> Add task</button>
+    `;
+    colsEl.appendChild(div);
+    const cardsEl=div.querySelector(`#cards-${col.id}`);
+    colCards.forEach(card=>{
+      const cat=CATS[card.cat]||CATS.life;const prio=PRIO[card.priority||'none'];
+      const el=document.createElement('div');el.className='card';el.draggable=true;el.dataset.id=card.id;
+      el.style.background=cat.bg;el.style.borderColor=cat.border;
+      el.innerHTML=`
+        <div class="card-top">
+          <div class="card-name" style="color:${cat.text}">${card.name}</div>
+          ${prio.label?`<span class="priority-badge" style="background:${prio.bg};color:${prio.text}">${prio.label}</span>`:''}
+        </div>
+        ${card.notes?`<div class="card-note" style="color:${cat.text}">${card.notes.slice(0,70)}${card.notes.length>70?'…':''}</div>`:''}
+        <div class="card-footer">
+          <span class="cat-tag" style="background:${cat.dot}22;color:${cat.text}">${cat.label}</span>
+          ${dueTag(card.due)}
+        </div>
+      `;
+      el.addEventListener('click',()=>openEdit(card.id));
+      el.addEventListener('dragstart',()=>{dragging=card.id;setTimeout(()=>el.classList.add('dragging'),0);showDZ(col.id);});
+      el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragging=null;hideDZ();});
+      cardsEl.appendChild(el);
+    });
+    const dz=div.querySelector(`#dz-${col.id}`);
+    dz.addEventListener('dragover',e=>{e.preventDefault();dz.style.background='#FFF1F2'});
+    dz.addEventListener('dragleave',()=>dz.style.background='');
+    dz.addEventListener('drop',e=>{e.preventDefault();dz.style.background='';if(dragging!=null){const c=cards.find(x=>x.id===dragging);if(c){c.col=col.id;save();render();if(radarVisible)renderRadar();}}});
+  });
+  updateDueBanner();
+}
+
+function showDZ(f){COLS.forEach(c=>{if(c.id!==f){const d=document.getElementById('dz-'+c.id);if(d)d.classList.add('active');}});}
+function hideDZ(){COLS.forEach(c=>{const d=document.getElementById('dz-'+c.id);if(d){d.classList.remove('active');d.style.background='';}});}
+
+window.openEdit=function(id){
+  editingId=id;addingCol=null;const c=cards.find(x=>x.id===id);
+  document.getElementById('modal-title').textContent=c.name;
+  document.getElementById('f-name').value=c.name;
+  document.getElementById('f-cat').value=c.cat;
+  document.getElementById('f-priority').value=c.priority||'none';
+  document.getElementById('f-due').value=c.due||'';
+  document.getElementById('f-notes').value=c.notes||'';
+  document.getElementById('delete-btn').style.display='';
+  document.getElementById('overlay').classList.add('open');
+};
+window.openAdd=function(colId){
+  editingId=null;addingCol=colId;
+  document.getElementById('modal-title').textContent='New task';
+  ['f-name','f-due','f-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('f-cat').value='school';
+  document.getElementById('f-priority').value='none';
+  document.getElementById('delete-btn').style.display='none';
+  document.getElementById('overlay').classList.add('open');
+  setTimeout(()=>document.getElementById('f-name').focus(),50);
+};
+window.closeModal=()=>{document.getElementById('overlay').classList.remove('open');editingId=null;addingCol=null;};
+window.saveCard=()=>{
+  const name=document.getElementById('f-name').value.trim();if(!name)return;
+  const data={name,cat:document.getElementById('f-cat').value,priority:document.getElementById('f-priority').value,due:document.getElementById('f-due').value,notes:document.getElementById('f-notes').value.trim()};
+  if(editingId!=null)Object.assign(cards.find(x=>x.id===editingId),data);
+  else if(addingCol)cards.push({id:nextId++,col:addingCol,...data});
+  save();closeModal();render();if(radarVisible)renderRadar();
+};
+window.deleteCard=()=>{if(editingId==null)return;cards=cards.filter(x=>x.id!==editingId);save();closeModal();render();if(radarVisible)renderRadar();};
+
+document.getElementById('overlay').addEventListener('click',e=>{if(e.target===document.getElementById('overlay'))closeModal();});
+document.getElementById('week-overlay').addEventListener('click',e=>{if(e.target===document.getElementById('week-overlay'))closeWeekSummary();});
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){closeModal();closeWeekSummary();}
+  if(e.key==='Enter'&&document.getElementById('overlay').classList.contains('open')&&e.target.tagName!=='TEXTAREA')saveCard();
+});
+
+// ── PWA install ───────────────────────────────────────
+let deferredPrompt=null;
+window.addEventListener('beforeinstallprompt',e=>{
+  e.preventDefault();deferredPrompt=e;
+  document.getElementById('install-banner').classList.add('show');
+});
+document.getElementById('install-btn').addEventListener('click',async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById('install-banner').classList.remove('show');
+});
+
+// ── Boot ──────────────────────────────────────────────
+loadLocal();
+render();
+initFirebase();
+</script>
+</body>
+</html>
