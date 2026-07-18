@@ -61,8 +61,9 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 .card-footer{display:flex;align-items:center;gap:5px;margin-top:5px;flex-wrap:wrap}
 .cat-tag{font-size:9px;padding:2px 5px;border-radius:99px;font-weight:500}
 .due-tag{display:inline-flex;align-items:center;gap:2px;font-size:9px;padding:2px 5px;border-radius:99px;font-weight:500}
-.drop-zone{border:1.5px dashed #f0d0d6;border-radius:8px;height:36px;display:none;align-items:center;justify-content:center;font-size:10px;color:#ccc;margin-top:3px}
-.drop-zone.active{display:flex}
+.drop-zone{border:2px dashed #f0d0d6;border-radius:8px;height:36px;display:none;align-items:center;justify-content:center;font-size:10px;color:#ccc;margin-top:3px;transition:all .15s}
+.drop-zone.active{display:flex;height:64px;font-size:13px;color:#E11D48;border-color:#E11D48;background:#FFF5F7}
+.col.drag-over{background:#FFF1F2;border:1.5px solid #E11D48}
 .add-btn{width:100%;margin-top:6px;font-size:11px;padding:5px 0;background:none;border:0.5px dashed #f0d0d6;border-radius:8px;color:#aaa;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:3px}
 .add-btn:hover{background:#fff5f7}
 .overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.38);z-index:200;align-items:center;justify-content:center;padding:1rem}
@@ -103,6 +104,16 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;b
 </head>
 <body>
 <div class="wrap">
+  <!-- Friendly install prompt for new visitors -->
+  <div id="install-guide" style="display:none;background:linear-gradient(135deg,#E11D48,#9333EA);color:#fff;border-radius:14px;padding:1.1rem 1.25rem;margin-bottom:.85rem">
+    <div style="font-size:15px;font-weight:600;margin-bottom:4px">👋 Add this to your home screen!</div>
+    <div style="font-size:12px;opacity:.9;margin-bottom:10px;line-height:1.5" id="install-guide-text"></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="install-btn-guide" style="display:none;font-size:12px;padding:7px 14px;border-radius:99px;border:1.5px solid #fff;background:transparent;color:#fff;cursor:pointer;font-weight:500">⊕ Install now</button>
+      <button onclick="document.getElementById('install-guide').style.display='none'" style="font-size:12px;padding:7px 14px;border-radius:99px;border:1.5px solid rgba(255,255,255,0.5);background:transparent;color:#fff;cursor:pointer">Maybe later</button>
+    </div>
+  </div>
+
   <div class="install-banner" id="install-banner">
     <i class="ti ti-device-mobile"></i>
     <strong style="flex:1">Install as an app on this device</strong>
@@ -402,7 +413,7 @@ function render(){
   const colsEl=document.getElementById('columns');colsEl.innerHTML='';
   COLS.forEach(col=>{
     const colCards=cards.filter(c=>c.col===col.id);
-    const div=document.createElement('div');div.className='col';
+    const div=document.createElement('div');div.className='col';div.dataset.col=col.id;
     div.innerHTML=`
       <div class="col-header">
         <i class="ti ${col.icon} col-icon" style="color:${col.color}"></i>
@@ -433,6 +444,7 @@ function render(){
       el.addEventListener('click',()=>openEdit(card.id));
       el.addEventListener('dragstart',()=>{dragging=card.id;setTimeout(()=>el.classList.add('dragging'),0);showDZ(col.id);});
       el.addEventListener('dragend',()=>{el.classList.remove('dragging');dragging=null;hideDZ();});
+      addTouchDrag(el,card.id,col.id);
       cardsEl.appendChild(el);
     });
     const dz=div.querySelector(`#dz-${col.id}`);
@@ -484,17 +496,108 @@ document.addEventListener('keydown',e=>{
   if(e.key==='Enter'&&document.getElementById('overlay').classList.contains('open')&&e.target.tagName!=='TEXTAREA')saveCard();
 });
 
+// ── Touch drag support for mobile ────────────────────
+function addTouchDrag(el,cardId,colId){
+  let touchStartX,touchStartY,clone,lastHighlit;
+  el.addEventListener('touchstart',e=>{
+    if(e.target.tagName==='BUTTON'||e.target.tagName==='SELECT'||e.target.tagName==='TEXTAREA'||e.target.tagName==='INPUT')return;
+    const touch=e.touches[0];
+    touchStartX=touch.clientX;touchStartY=touch.clientY;
+    const rect=el.getBoundingClientRect();
+    clone=el.cloneNode(true);
+    clone.style.cssText=`position:fixed;width:${rect.width}px;opacity:0.88;pointer-events:none;z-index:9999;left:${rect.left}px;top:${rect.top}px;transform:rotate(2deg) scale(1.05);border-radius:9px;box-shadow:0 8px 28px rgba(0,0,0,0.22);transition:none;`;
+    document.body.appendChild(clone);
+    el.style.opacity='0.25';
+    dragging=cardId;
+    showDZ(colId);
+  },{passive:true});
+
+  el.addEventListener('touchmove',e=>{
+    if(!clone)return;
+    e.preventDefault();
+    const touch=e.touches[0];
+    const dx=touch.clientX-touchStartX;
+    const dy=touch.clientY-touchStartY;
+    const rect=el.getBoundingClientRect();
+    clone.style.left=(rect.left+dx)+'px';
+    clone.style.top=(rect.top+dy)+'px';
+    // Highlight the column under the finger
+    clone.style.display='none';
+    const under=document.elementFromPoint(touch.clientX,touch.clientY);
+    clone.style.display='';
+    if(lastHighlit){lastHighlit.classList.remove('drag-over');lastHighlit=null;}
+    if(under){
+      const col=under.closest('.col');
+      if(col&&col.dataset.col&&col.dataset.col!==colId){
+        col.classList.add('drag-over');
+        lastHighlit=col;
+      }
+    }
+  },{passive:false});
+
+  el.addEventListener('touchend',e=>{
+    if(!clone)return;
+    const touch=e.changedTouches[0];
+    clone.remove();clone=null;
+    el.style.opacity='';
+    if(lastHighlit){lastHighlit.classList.remove('drag-over');lastHighlit=null;}
+    document.querySelectorAll('.col').forEach(c=>c.classList.remove('drag-over'));
+    // Find the column under the finger at release
+    const under=document.elementFromPoint(touch.clientX,touch.clientY);
+    if(under){
+      const col=under.closest('.col');
+      if(col&&col.dataset.col){
+        const c=cards.find(x=>x.id===dragging);
+        if(c&&c.col!==col.dataset.col){
+          c.col=col.dataset.col;
+          save();render();
+          if(radarVisible)renderRadar();
+        }
+      }
+    }
+    dragging=null;hideDZ();
+  },{passive:true});
+}
+
 // ── PWA install ───────────────────────────────────────
 let deferredPrompt=null;
+
+// Show friendly install guide if not already installed
+const isInstalled=window.matchMedia('(display-mode: standalone)').matches||window.navigator.standalone;
+if(!isInstalled){
+  const guide=document.getElementById('install-guide');
+  const guideText=document.getElementById('install-guide-text');
+  const isIOS=/iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isMac=/Macintosh/.test(navigator.userAgent)&&!isIOS;
+  if(isIOS){
+    guide.style.display='block';
+    guideText.textContent='Tap the Share button at the bottom of your screen (the box with ↑), then tap "Add to Home Screen" — and you\'re done!';
+  } else if(isMac){
+    guide.style.display='block';
+    guideText.textContent='Click the ⊕ icon on the right side of your address bar, then click "Install" — it\'ll appear in your dock!';
+    document.getElementById('install-btn-guide').style.display='inline-block';
+  }
+}
+
 window.addEventListener('beforeinstallprompt',e=>{
   e.preventDefault();deferredPrompt=e;
   document.getElementById('install-banner').classList.add('show');
+  const btn=document.getElementById('install-btn-guide');
+  if(btn)btn.style.display='inline-block';
 });
 document.getElementById('install-btn').addEventListener('click',async()=>{
   if(!deferredPrompt)return;
   deferredPrompt.prompt();await deferredPrompt.userChoice;
   deferredPrompt=null;
   document.getElementById('install-banner').classList.remove('show');
+  document.getElementById('install-guide').style.display='none';
+});
+const guidBtn=document.getElementById('install-btn-guide');
+if(guidBtn)guidBtn.addEventListener('click',async()=>{
+  if(!deferredPrompt)return;
+  deferredPrompt.prompt();await deferredPrompt.userChoice;
+  deferredPrompt=null;
+  document.getElementById('install-guide').style.display='none';
 });
 
 // ── Boot ──────────────────────────────────────────────
